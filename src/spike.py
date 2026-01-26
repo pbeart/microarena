@@ -115,13 +115,14 @@ class SpikeSimDriver(simdriver.SimDriver):
     def start(self):
         print("Running", " ".join([self._spike, *self._args]))
         self._spawn = pexpect.spawn(self._spike, self._args, encoding="utf-8")
+        self._spawn.delaybeforesend = 0.0
         try:
             self._repl = pexpect.replwrap.REPLWrapper(self._spawn, "(spike) ", prompt_change=None)
         except pexpect.exceptions.EOF as e:
             assert self._spawn is not None
             raise UnexpectedEOFException(self._spawn.before)
         
-        time.sleep(1)
+        time.sleep(0.1)
         #print("Immediate:", self.spawn.read(1))
 
     def _handle_spike_output(self, output: str):
@@ -159,11 +160,16 @@ class SpikeSimDriver(simdriver.SimDriver):
 struct_r = mmio_struct.microarena_io_r_t()
 struct_rw = mmio_struct.microarena_io_rw_t()
 
-s = SpikeSimDriver(struct_rw, struct_r, "./src/spike_vm/memories.lds", "../riscv-isa-sim/build/spike", "rv32imafdc", "./src/spike_vm/mmu_filebacked/build/filebacked.so", "store_to.tmp", "load_from.tmp", "./src/spike_vm/build/target")
+s = SpikeSimDriver(struct_rw, struct_r, "./src/spike_vm/memories.lds", "../riscv-isa-sim/build/spike", "rv32imafdc", "./src/spike_vm/extensions/build/filebacked.so", "store_to.tmp", "load_from.tmp", "./src/spike_vm/build/target")
 
 s.start()
+start = time.time()
+n = 0
 for i in range(4000):
     s.step()
+    n += 1
     if s.mmio_struct_rw.stdout_go != 0:
         print("".join(chr(x) for x in s.mmio_struct_rw.stdout_buffer))
         break
+t = time.time() - start
+print(f"Total time {t} for {n} instructions = {n/t}Hz")

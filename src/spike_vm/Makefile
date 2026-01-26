@@ -6,13 +6,13 @@ CFLAGS_RISCV = -g -Og
 
 PY = uv run python
 
-all: build/target mmu_filebacked/build/filebacked.so
+all: build/target extensions/build/filebacked.so
 
 build/mmio.generated.h: mmio_struct.py ../structure_utils.py
 	cd ../..; $(PY) -m src.spike_vm.mmio_struct > src/spike_vm/build/mmio.generated.h
 
-mmu_filebacked/build/filebacked.so: mmu_filebacked/filebacked.cpp
-	$(CC) -shared $(CFLAGS) -o mmu_filebacked/build/filebacked.so -fPIC mmu_filebacked/filebacked.cpp
+extensions/build/filebacked.so: extensions/filebacked.cpp
+	$(CC) -shared $(CFLAGS) -o extensions/build/filebacked.so -fPIC extensions/filebacked.cpp
 
 build/start.o: start.S
 	$(CC_RISCV) $(CFLAGS_RISCV) -x assembler-with-cpp -o build/start.o -c start.S
@@ -28,5 +28,5 @@ build/target: link.lds build/harness.o build/target.o build/start.o
 
 .PHONY: clean 
 clean:
-	rm -rf mmu_filebacked/build/*
+	rm -rf extensions/build/*
 	rm -rf build/*
