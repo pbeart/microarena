@@ -1,0 +1,1 @@
+# must make spike_vm a module because it contains the mmio_struct.py file, which must be accessible from the outer Python module

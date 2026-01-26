@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+*.prof
+
+# Virtual environments
+.venv
+
+# Build artifacts
+bin/
+
+# Temporary files
+*.tmp
