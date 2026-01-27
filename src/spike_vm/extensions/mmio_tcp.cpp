@@ -148,14 +148,14 @@ class mmio_tcp_t : public abstract_device_t
         //printf("Sending %d, %d, %ld\n", message.addr, message.len, sizeof(message));
         if (send(sock, &message, sizeof(message), 0) < 0)
         {
-            throw std::runtime_error("mmio_tcp: send() failed during store");
+            throw std::runtime_error("mmio_tcp: send() failed during store: " + std::string(strerror(errno)));
         }
 
         // send data
         
         if (send(sock, bytes, len, 0) < 0)
         {
-            throw std::runtime_error("mmio_tcp: send() failed during store");
+            throw std::runtime_error("mmio_tcp: send() failed during store: " + std::string(strerror(errno)));
         }
         
         
