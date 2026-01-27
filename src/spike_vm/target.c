@@ -14,7 +14,8 @@ int main() {
     //    mmio_rw->stdout_buffer[i] = a[i];
     //};
     //mmio_rw->stdout_go = 0xff;
-    log_string("Hello world!\n");
+    char a = mmio_r->b;
+    //log_string("Hello world!\n");
     //_write(0, a, 10);
     //printf("Hi!\n");
     //int x = sub(5);

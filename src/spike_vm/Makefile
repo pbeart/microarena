@@ -6,10 +6,16 @@ CFLAGS_RISCV = -g -Og
 
 PY = uv run python
 
-all: build/target extensions/build/filebacked.so
+all: build/target extensions/build/filebacked.so extensions/build/mmio_tcp.so
 
-build/mmio.generated.h: mmio_struct.py ../structure_utils.py
-	cd ../..; $(PY) -m src.spike_vm.mmio_struct > src/spike_vm/build/mmio.generated.h
+build/mmio.generated.h: struct_mmio.py ../structure_utils.py
+	cd ../..; $(PY) -m src.spike_vm.struct_mmio > src/spike_vm/build/mmio.generated.h
+
+build/tcp_mmio_proto.generated.h: struct_tcp_mmio_proto.py ../structure_utils.py
+	cd ../..; $(PY) -m src.spike_vm.struct_tcp_mmio_proto > src/spike_vm/build/tcp_mmio_proto.generated.h
+
+extensions/build/mmio_tcp.so: extensions/mmio_tcp.cpp build/tcp_mmio_proto.generated.h
+	$(CC) -shared $(CFLAGS) -o extensions/build/mmio_tcp.so -fPIC extensions/mmio_tcp.cpp
 
 extensions/build/filebacked.so: extensions/filebacked.cpp
 	$(CC) -shared $(CFLAGS) -o extensions/build/filebacked.so -fPIC extensions/filebacked.cpp

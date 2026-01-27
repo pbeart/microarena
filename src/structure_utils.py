@@ -1,4 +1,5 @@
 import ctypes
+import ctypes._endian
 from dataclasses import dataclass
 from typing import Type
 
@@ -29,30 +30,48 @@ class SelfExpositingStructure(ctypes.Structure):
         return s
     
 def MakeByteAlignedStructure(n):
-
     class ByteAlignedStructure(SelfExpositingStructure):
         _align_ = n
         _pack_ = n
     return ByteAlignedStructure
 
+class PackedStructure(SelfExpositingStructure):
+    _pack_ = 1
+
 def builtin_ctype_to_c_type(ctype, structure):
     MAP_CTYPES = {
-        ctypes.c_int32: "int32_t",
-        ctypes.c_int16: "int16_t",
-        ctypes.c_int8: "int8_t"
+        4: "int32_t",
+        2: "int16_t",
+        1: "int8_t"
     }
-    if not ctype in MAP_CTYPES:
-        raise TypeError(f"Can't handle field of type {ctype} in {structure}.")
+    if not ctypes.sizeof(ctype) in MAP_CTYPES:
+        raise TypeError(f"Can't handle field of type {ctype} with size {ctypes.sizeof(ctype)} in {structure}.")
 
-    return MAP_CTYPES[ctype]
+    return MAP_CTYPES[ctypes.sizeof(ctype)]
 
-def h_source_and_dependencies(structure: Type[ctypes.Structure], align_bytes):
+def h_source_and_dependencies(structure: Type[ctypes.Structure]):
     name = structure.__name__
 
     depends_on: set[Type[ctypes.Structure]] = set()
 
+    def _inherits_dynamic(from_: str, cls: type):
+        "Hacky way to check if a ctypes.Structure is explicitly little/big "
+        "endian: issubclass won't work because Big... and LittleEndianStructure"
+        "are created dynamically, so we check MRO manually"
+        return from_ in [x.__name__ for x in cls.mro()]
+            
+
     indent = "    "
-    s = "typedef struct {\n"
+    s = ""
+    if _inherits_dynamic("ctypes._endian.BigEndianStructure", structure):
+        s += "// Corresponds to big-endian Python structure\n"
+    elif _inherits_dynamic("ctypes._endian.LittleEndianStructure", structure):
+        s += "// Corresponds to little-endian Python structure\n"
+    else:
+        s += "// Uses host endianness\n"
+
+    print("//",structure.mro())
+    s += "typedef struct {\n"
     for (field_name, field_type, *_) in structure._fields_:
         
         if issubclass(field_type, ctypes.Structure):
@@ -72,7 +91,14 @@ def h_source_and_dependencies(structure: Type[ctypes.Structure], align_bytes):
 
         s += f"{indent}{c_type} {field_name}{length_specifier};\n"
 
-    s += f"}}__attribute__((packed, aligned({align_bytes}))) {name};\n"
+    if structure._pack_ == 1:
+        attribute_gcc = "__attribute__((packed))"
+    elif structure._align_ != 0:
+        attribute_gcc = f"__attribute__((packed, aligned({structure._align_})))"
+    else:
+        attribute_gcc = ""
+
+    s += f"}}{attribute_gcc} {name};\n"
 
     return s, depends_on
 
@@ -90,7 +116,7 @@ def structures_to_header(structures: list[Type[ctypes.Structure]], align_bytes):
         for structure_dependency in checking:
             if structure_dependency.__name__ in nodes: continue
 
-            source, depends_on_structures = h_source_and_dependencies(structure_dependency, align_bytes)
+            source, depends_on_structures = h_source_and_dependencies(structure_dependency)
             to_check += depends_on_structures
             structure_sources[structure_dependency.__name__] = source
 
@@ -98,6 +124,7 @@ def structures_to_header(structures: list[Type[ctypes.Structure]], align_bytes):
             nodes[structure_dependency.__name__] = depends_on_names
 
     out = "#pragma once\n#include <stdint.h>\n"
+    out += "// DO NOT EDIT DIRECTLY: FILE GENERATED FROM A PYTHON CTYPES STRUCTURE\n"
 
     while nodes:
         eliminated = []
