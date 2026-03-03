@@ -10,6 +10,9 @@ wheels/
 # Virtual environments
 .venv
 
+# IDE
+.vscode
+
 # Build artifacts
 bin/
 
