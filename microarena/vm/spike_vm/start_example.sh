@@ -1,0 +1,1 @@
+../../riscv-isa-sim/build/spike -d --isa rv32imafdc -m0x11110000:0x1000 --extlib=extensions/build/filebacked.so --device=filebacked,0x32220000,0x10,write,load build/target
